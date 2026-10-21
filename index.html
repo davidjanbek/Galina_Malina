@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Калькулятор Торта</title>
+    <title>Калькулятор параметров торта</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -12,6 +12,8 @@
             --text-color: #2d3436;
             --accent-color: #d63031;
             --border-color: #dfe6e9;
+            --error-bg: #ffeaa7;
+            --error-border: #fdcb6e;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -26,28 +28,36 @@
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            max-width: 400px;
+            max-width: 420px;
             margin: 0 auto;
         }
         h2 { margin-top: 0; font-size: 20px; text-align: center; color: #2d3436; }
+        
         .upload-area {
             border: 2px dashed #b2bec3;
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             text-align: center;
             background: #fafafa;
             cursor: pointer;
             margin-bottom: 14px;
-            position: relative;
         }
         .upload-area img {
             max-width: 100%;
-            max-height: 180px;
+            max-height: 160px;
             border-radius: 8px;
             display: none;
             margin-top: 8px;
         }
-        .form-group { margin-bottom: 12px; }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+            flex: 1;
+        }
         label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #636e72; }
         input, select {
             width: 100%;
@@ -58,30 +68,44 @@
             box-sizing: border-box;
             background: #fff;
         }
-        .btn-ai {
+        
+        .btn-calc {
             width: 100%;
             padding: 14px;
-            background: #6c5ce7;
+            background: var(--accent-color);
             color: #fff;
             border: none;
             border-radius: 12px;
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
             cursor: pointer;
             margin-top: 8px;
         }
+
+        .error-card {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            border-radius: 10px;
+            font-size: 13px;
+            color: #d63031;
+            font-weight: 600;
+        }
+
         .result-card {
             display: none;
             margin-top: 16px;
-            padding: 14px;
-            background: #f8f9fa;
-            border: 1px solid #e2e8f0;
+            padding: 16px;
+            background: #fff0f0;
+            border: 1px solid #ffbebe;
             border-radius: 12px;
-            font-size: 13px;
+            font-size: 13.5px;
             line-height: 1.6;
             color: #2d3436;
-            white-space: pre-wrap;
         }
+
         .btn-copy {
             display: none;
             width: 100%;
@@ -95,48 +119,65 @@
             cursor: pointer;
             margin-top: 10px;
         }
-        .key-box {
-            background: #eef2f7;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 14px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>🎂 AI Калькулятор Торта</h2>
+        <h2>🎂 Расчет параметров торта</h2>
         
-        <div class="key-box">
-            <label>🔑 Gemini API Key (сохраняется один раз):</label>
-            <input type="password" id="api_key" placeholder="Вставьте ваш AI Studio Key" onchange="saveKey(this.value)">
+        <div class="upload-area" onclick="document.getElementById('file-input').click()">
+            <span id="upload-label">📸 Прикрепить фото эскиза / референса</span>
+            <img id="preview" alt="Эскиз">
+            <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
         </div>
 
-        <div class="upload-area" onclick="document.getElementById('file-input').click()">
-            <span id="upload-label">📸 Загрузить фото эскиза / торта</span>
-            <img id="preview" alt="Предпросмотр">
-            <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Верхний ярус (Ø см): *</label>
+                <input type="number" id="top_d" placeholder="например 15" min="5" max="100">
+            </div>
+            <div class="form-group">
+                <label>Ярусов (шт): *</label>
+                <input type="number" id="tiers" placeholder="например 3" min="1" max="20">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Шаг ярусов (см):</label>
+                <input type="number" id="step" value="5" min="2" max="15">
+            </div>
+            <div class="form-group">
+                <label>Высота яруса (см):</label>
+                <input type="number" id="height" value="12" min="5" max="25">
+            </div>
         </div>
 
         <div class="form-group">
             <label>Плотность / тип начинки:</label>
             <select id="density">
-                <option value="Легкая (мусс, суфле, ягоды)">Легкая (мусс, суфле)</option>
-                <option value="Стандартная (бисквит + крем)" selected>Стандартная (бисквит + крем)</option>
-                <option value="Плотная (Сникерс, карамель, орехи)">Плотная (Сникерс, карамель)</option>
-                <option value="Тяжелая (ганаш, мастичный декор)">Тяжелая (ганаш, мастика)</option>
+                <option value="0.00048">Муссовая / легкая (~0.5 кг/л)</option>
+                <option value="0.00065" selected>Стандартная бисквитная (~0.65 кг/л)</option>
+                <option value="0.00085">Плотная (Сникерс, орехи, карамель)</option>
+                <option value="0.00100">Тяжелая (ганаш, мастичный декор)</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label>Известный диаметр верхнего яруса (см):</label>
-            <input type="number" id="top_d" value="15">
+            <label>Желаемый вес от клиента (кг, необязательно):</label>
+            <input type="number" id="target_weight" step="0.1" placeholder="например: 6.5">
         </div>
 
-        <button class="btn-ai" id="ai-btn" onclick="analyzeWithAI()">🤖 Проанализировать фото через ИИ</button>
+        <div class="form-group">
+            <label>Пожелания по декору и деталям:</label>
+            <input type="text" id="notes" placeholder="например: фигурка, корона, живые цветы">
+        </div>
 
+        <button class="btn-calc" onclick="calculateCake()">Сформировать расчет</button>
+
+        <div id="error-box" class="error-card"></div>
         <div id="result" class="result-card"></div>
-        <button id="copy-btn" class="btn-copy" onclick="copyResult()">📋 Скопировать расчет</button>
+        <button id="copy-btn" class="btn-copy" onclick="copyResult()">📋 Скопировать спецификацию</button>
     </div>
 
     <script>
@@ -145,143 +186,111 @@
             window.Telegram.WebApp.expand();
         }
 
-        // Автозагрузка ключа из памяти
-        document.getElementById('api_key').value = localStorage.getItem('gemini_api_key') || '';
-
-        function saveKey(val) {
-            localStorage.setItem('gemini_api_key', val.trim());
-        }
-
-        let selectedBase64 = null;
-        let selectedMime = 'image/jpeg';
-
         function handleFileSelect(input) {
             if (input.files && input.files[0]) {
-                const file = input.files[0];
-                selectedMime = file.type || 'image/jpeg';
-                
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = document.getElementById('preview');
                     img.src = e.target.result;
                     img.style.display = 'block';
-                    document.getElementById('upload-label').innerText = '✅ Фото загружено: ' + file.name;
-                    
-                    // Берем чистую Base64-строку без префикса data:image/...
-                    const parts = e.target.result.split(',');
-                    selectedBase64 = parts.length > 1 ? parts[1] : parts[0];
+                    document.getElementById('upload-label').innerText = '✅ Фото прикреплено';
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(input.files[0]);
             }
         }
 
-        async function analyzeWithAI() {
-            const apiKey = document.getElementById('api_key').value.trim();
-            if (!apiKey) {
-                alert('Пожалуйста, укажите Gemini API Key в поле вверху.');
+        function calculateCake() {
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result');
+            const copyBtn = document.getElementById('copy-btn');
+
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            copyBtn.style.display = 'none';
+
+            // Считывание значений
+            const topDInput = document.getElementById('top_d').value;
+            const tiersInput = document.getElementById('tiers').value;
+
+            // Валидация: проверка обязательных данных
+            let missingFields = [];
+            if (!topDInput || parseFloat(topDInput) <= 0) missingFields.push('Диаметр верхнего яруса');
+            if (!tiersInput || parseInt(tiersInput) <= 0) missingFields.push('Количество ярусов');
+
+            if (missingFields.length > 0) {
+                errorBox.innerHTML = '⚠️ <b>Недостаточно данных для расчета!</b><br>Пожалуйста, укажите: ' + missingFields.join(', ') + '.';
+                errorBox.style.display = 'block';
                 return;
             }
 
-            if (!selectedBase64) {
-                alert('Пожалуйста, загрузите фото торта для анализа.');
-                return;
+            const topD = parseFloat(topDInput);
+            const tiersCount = parseInt(tiersInput);
+            const stepD = parseFloat(document.getElementById('step').value) || 5;
+            const tierH = parseFloat(document.getElementById('height').value) || 12;
+            const densitySelect = document.getElementById('density');
+            const densityValue = parseFloat(densitySelect.value);
+            const densityName = densitySelect.options[densitySelect.selectedIndex].text.split(' (')[0];
+            const targetWeight = parseFloat(document.getElementById('target_weight').value);
+            const notes = document.getElementById('notes').value.trim() || 'По эскизу заказчика';
+
+            let tiersList = [];
+            let totalHeight = 0;
+            let approxWeight = 0;
+            let lastD = topD;
+
+            for (let i = 1; i <= tiersCount; i++) {
+                let currentD = topD + (i - 1) * stepD;
+                tiersList.push(`• ${i}-й ярус: <b>Ø ${currentD} см</b> × ${tierH} см`);
+                totalHeight += tierH;
+                
+                // Объём цилиндра = π * r² * h
+                let volume = Math.PI * Math.pow(currentD / 2, 2) * tierH;
+                approxWeight += volume * densityValue;
+                lastD = currentD;
             }
 
-            const densityName = document.getElementById('density').value;
-            const topD = document.getElementById('top_d').value || '15';
-            const btn = document.getElementById('ai-btn');
-            const resDiv = document.getElementById('result');
+            const substrateD = lastD + 6;
+            const axisH = totalHeight + 8;
+            const finalWeightStr = approxWeight.toFixed(1);
 
-            btn.innerText = '⏳ ИИ анализирует фото...';
-            btn.disabled = true;
+            let specHtml = `<b>📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b><br>`;
+            specHtml += `───────────────────────────<br>`;
+            specHtml += `🎂 <b>Ярусов:</b> ${tiersCount}<br>`;
+            specHtml += `🍰 <b>Тип начинки:</b> ${densityName}<br>`;
+            specHtml += `📏 <b>Верхний диаметр:</b> Ø ${topD} см<br><br>`;
+            specHtml += `📐 <b>РАСЧЕТ ЯРУСОВ (Диаметр × Высота):</b><br>`;
+            specHtml += tiersList.join('<br>') + `<br><br>`;
+            specHtml += `🛠 <b>КОНСТРУКТИВ И СБОРКА:</b><br>`;
+            specHtml += `• Подложка: <b>Ø ${substrateD} см</b><br>`;
+            specHtml += `• Высота конструкции: <b>${totalHeight} см</b><br>`;
+            specHtml += `• Центральная ось: <b>${axisH} см</b><br>`;
+            specHtml += `• Ориентировочный вес: <b>~${finalWeightStr} кг</b><br>`;
 
-            const promptText = `Ты профессиональный технолог-кондитер. Проанализируй прикрепленное фото торта и составь точную спецификацию.
-Учти следующие вводные данные от кондитера:
-- Базовый диаметр верхнего яруса: ${topD} см.
-- Тип и плотность начинки: ${densityName}.
-
-Выполни визуальный анализ фото и сформируй спецификацию СТРОГО в следующем формате текста (без лишних вступлений):
-
-📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА
-───────────────────────────
-🎂 Ярусов: [число ярусов по фото]
-🍰 Начинка: ${densityName}
-📏 Верхний диаметр: Ø ${topD} см
-
-📐 РАСЧЕТ ЯРУСОВ (Диаметр × Высота):
-• 1-й ярус: Ø ${topD} см × 12 см
-• [остальные ярусы с шагом +5 см по диаметру, если торт многоярусный]
-
-🛠 КОНСТРУКТИВ И СБОРКА:
-• Подложка: Ø [диаметр нижнего яруса + 6 см] см
-• Высота конструкции: [суммарная высота] см
-• Центральная ось: [высота + 8 см] см
-• Ориентировочный вес: ~[рассчитай реалистичный вес в кг] кг
-
-🎨 АНАЛИЗ ДЕКОРА ПО ФОТО:
-• [подробный список элементов декора, фигурок, цветовой гаммы и покрытия, которые ты видишь на картинке]
-───────────────────────────
-Сформировано автоматически ИИ-ассистентом кондитера`;
-
-            const modelsToTry = [
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-latest',
-                'gemini-2.0-flash-exp'
-            ];
-
-            let success = false;
-            let lastError = '';
-
-            for (const modelName of modelsToTry) {
-                try {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { text: promptText },
-                                    {
-                                        inline_data: {
-                                            mime_type: selectedMime,
-                                            data: selectedBase64
-                                        }
-                                    }
-                                ]
-                            }]
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
-                        const aiResponse = data.candidates[0].content.parts[0].text;
-                        resDiv.innerText = aiResponse;
-                        resDiv.style.display = 'block';
-                        document.getElementById('copy-btn').style.display = 'block';
-                        success = true;
-                        break;
-                    } else if (data.error) {
-                        lastError = data.error.message || ('Ошибка в модели ' + modelName);
-                    }
-                } catch (err) {
-                    lastError = err.message;
+            // Проверка и сравнение с желаемым весом от клиента
+            if (!isNaN(targetWeight) && targetWeight > 0) {
+                const diff = Math.abs(approxWeight - targetWeight).toFixed(1);
+                specHtml += `<br>🎯 <b>Заявленный вес клиентом:</b> ${targetWeight} кг<br>`;
+                if (Math.abs(approxWeight - targetWeight) > 1.0) {
+                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Поправьте диаметры или высоту.</i><br>`;
+                } else {
+                    specHtml += `✅ <i>Размеры полностью соответствуют заявленному весу.</i><br>`;
                 }
             }
 
-            if (!success) {
-                alert('Не удалось вызвать ИИ: ' + lastError + '\n\nПроверьте ваш API ключ и доступ к AI Studio.');
-            }
+            specHtml += `<br>💬 <b>Декор и примечания:</b> ${notes}<br>`;
+            specHtml += `───────────────────────────<br>`;
+            specHtml += `<i>Сформировано автоматически</i>`;
 
-            btn.innerText = '🤖 Проанализировать фото через ИИ';
-            btn.disabled = false;
+            resultBox.innerHTML = specHtml;
+            resultBox.style.display = 'block';
+            copyBtn.style.display = 'block';
         }
 
         function copyResult() {
-            const textToCopy = document.getElementById('result').innerText;
+            const container = document.getElementById('result');
+            const textToCopy = container.innerText;
             navigator.clipboard.writeText(textToCopy).then(() => {
-                alert('Спецификация скопирована!');
+                alert('Спецификация скопирована в буфер обмена!');
             });
         }
     </script>
