@@ -137,12 +137,7 @@
 
         <div class="form-group">
             <label>Желаемый вес от клиента (кг, необязательно):</label>
-            <input type="number" id="target_weight" step="0.1" placeholder="например: 6.5">
-        </div>
-
-        <div class="form-group">
-            <label>Пожелания по декору и деталям:</label>
-            <input type="text" id="notes" placeholder="например: фигурка, корона, живые цветы">
+            <input type="number" id="target_weight" step="0.1" placeholder="например 6.5">
         </div>
 
         <button class="btn-calc" onclick="calculateCake()">Сформировать расчет</button>
@@ -188,9 +183,8 @@
             const tiersCount = parseInt(tiersInput);
             const stepD = parseFloat(document.getElementById('step').value) || 5;
             const tierH = parseFloat(document.getElementById('height').value) || 12;
-            const densityKgL = parseFloat(densityInput); // Введённая пользователем плотность в кг/л
+            const densityKgL = parseFloat(densityInput);
             const targetWeight = parseFloat(document.getElementById('target_weight').value);
-            const notes = document.getElementById('notes').value.trim() || 'Без особых примечаний';
 
             let tiersList = [];
             let totalHeight = 0;
@@ -232,13 +226,12 @@
                 const diff = Math.abs(approxWeight - targetWeight).toFixed(1);
                 specHtml += `<br>🎯 <b>Заявленный вес клиентом:</b> ${targetWeight} кг<br>`;
                 if (Math.abs(approxWeight - targetWeight) > 0.8) {
-                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скоректируйте диаметры или высоту.</i><br>`;
+                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скорректируйте диаметры или высоту.</i><br>`;
                 } else {
                     specHtml += `✅ <i>Размеры полностью соответствуют заявленному весу.</i><br>`;
                 }
             }
 
-            specHtml += `<br>💬 <b>Декор и примечания:</b> ${notes}<br>`;
             specHtml += `───────────────────────────<br>`;
             specHtml += `<i>Сформировано автоматически</i>`;
 
