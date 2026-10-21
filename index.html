@@ -3,59 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Расчет параметров торта</title>
+    <title>Калькулятор параметров торта</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f6f8; color: #2d3436; margin: 0; padding: 16px; }
-        .container { background: #ffffff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); max-width: 400px; margin: 0 auto; }
-        h2 { margin-top: 0; font-size: 20px; text-align: center; color: #2d3436; }
-        .upload-area { border: 2px dashed #b2bec3; border-radius: 12px; padding: 20px; text-align: center; background: #fafafa; cursor: pointer; margin-bottom: 16px; }
+        :root {
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-color: #2d3436;
+            --accent-color: #d63031;
+            --border-color: #dfe6e9;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        h2 {
+            margin-top: 0;
+            font-size: 20px;
+            text-align: center;
+            color: #2d3436;
+        }
+        .upload-area {
+            border: 2px dashed #b2bec3;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        .upload-area span { font-size: 14px; color: #636e72; font-weight: 500; }
         .form-group { margin-bottom: 14px; }
         label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #dfe6e9; border-radius: 10px; font-size: 15px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #d63031; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 15px;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        .btn-calc {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .result-card {
+            display: none;
+            margin-top: 20px;
+            padding: 16px;
+            background: #fdf6f6;
+            border: 1px solid #fab1a0;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .btn-copy {
+            width: 100%;
+            padding: 12px;
+            background: #2d3436;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>🍰 Расчет торта</h2>
+        <h2>🍰 Калькулятор параметров торта</h2>
+        
         <div class="upload-area" onclick="document.getElementById('file-input').click()">
             <span id="upload-label">📸 Загрузить фото эскиза / торта</span>
             <input type="file" id="file-input" accept="image/*" style="display:none" onchange="updateLabel(this)">
         </div>
+
         <div class="form-group">
-            <label>Известный диаметр верхнего яруса (см):</label>
-            <input type="number" id="top_d" value="15">
+            <label>Диаметр верхнего яруса (см):</label>
+            <input type="number" id="top_d" value="15" min="5" max="100">
         </div>
+
         <div class="form-group">
-            <label>Количество ярусов:</label>
-            <select id="tiers">
-                <option value="1">1 ярус</option>
-                <option value="2">2 яруса</option>
-                <option value="3" selected>3 яруса</option>
-            </select>
+            <label>Количество ярусов (неограниченно):</label>
+            <input type="number" id="tiers" value="3" min="1" max="20" placeholder="Введите число ярусов">
         </div>
+
+        <div class="form-group">
+            <label>Шаг увеличения диаметра ярусов (см):</label>
+            <input type="number" id="step" value="5" min="2" max="15">
+        </div>
+
         <div class="form-group">
             <label>Пожелания по декору и деталям:</label>
-            <input type="text" id="notes" placeholder="например: фигурка с короной, ~6.5 кг">
+            <input type="text" id="notes" placeholder="например: фигурка с короной, розовая гамма">
         </div>
-        <button onclick="submitForm()">Сформировать расчет</button>
+
+        <button class="btn-calc" onclick="calculateCake()">Сформировать расчет</button>
+
+        <div id="result" class="result-card"></div>
+        <button id="copy-btn" class="btn-copy" style="display:none;" onclick="copyResult()">📋 Скопировать расчет</button>
     </div>
+
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        const tg = window.Telegram?.WebApp;
+        if (tg) tg.expand();
+
         function updateLabel(input) {
             if (input.files && input.files[0]) {
-                document.getElementById('upload-label').innerText = '✅ Выбрано: ' + input.files[0].name;
+                document.getElementById('upload-label').innerText = '✅ Фото выбрано: ' + input.files[0].name;
             }
         }
-        function submitForm() {
-            const payload = {
-                top_d: parseInt(document.getElementById('top_d').value || 15),
-                tiers: parseInt(document.getElementById('tiers').value || 3),
-                notes: document.getElementById('notes').value || 'Без особых пожеланий'
-            };
-            tg.sendData(JSON.stringify(payload));
+
+        function calculateCake() {
+            const topD = parseInt(document.getElementById('top_d').value) || 15;
+            const tiersCount = parseInt(document.getElementById('tiers').value) || 1;
+            const stepD = parseInt(document.getElementById('step').value) || 5;
+            const notes = document.getElementById('notes').value || 'Без особых пожеланий';
+
+            let tiersList = [];
+            let totalHeight = 0;
+            let approxWeight = 0;
+            let bottomD = topD;
+
+            for (let i = 1; i <= tiersCount; i++) {
+                let currentD = topD + (i - 1) * stepD;
+                let currentH = 12; // Стандартная высота яруса
+                tiersList.push(`• ${i}-й ярус: <b>Ø ${currentD} см</b> × ${currentH} см`);
+                totalHeight += currentH;
+                approxWeight += (Math.PI * Math.pow(currentD / 2, 2) * currentH) * 0.00065;
+                bottomD = currentD;
+            }
+
+            const substrateD = bottomD + 6;
+            const axisH = totalHeight + 8;
+            approxWeight = approxWeight.toFixed(1);
+
+            let spec = `📋 <b>СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b>\n`;
+            spec += `───────────────────────────\n`;
+            spec += `🎂 <b>Количество ярусов:</b> ${tiersCount}\n`;
+            spec += `📏 <b>Базовый диаметр (верхний):</b> Ø ${topD} см\n\n`;
+            spec += `📐 <b>РАСЧЕТ ЯРУСОВ (Диаметр × Высота):</b>\n`;
+            spec += tiersList.join('\n') + `\n\n`;
+            spec += `🛠 <b>КОНСТРУКТИВ И СБОРКА:</b>\n`;
+            spec += `• Рекомендуемая подложка: <b>Ø ${substrateD} см</b>\n`;
+            spec += `• Общая высота конструкции: <b>${totalHeight} см</b>\n`;
+            spec += `• Длина центральной оси: <b>${axisH} см</b>\n`;
+            spec += `• Ориентировочный вес: <b>~${approxWeight} кг</b>\n\n`;
+            spec += `💬 <b>Пожелания:</b> ${notes}\n`;
+            spec += `───────────────────────────\n`;
+            spec += `<i>Сформировано автоматически в едином стандарте.</i>`;
+
+            const resDiv = document.getElementById('result');
+            resDiv.innerHTML = spec;
+            resDiv.style.display = 'block';
+
+            const copyBtn = document.getElementById('copy-btn');
+            copyBtn.style.display = 'block';
+
+            if (tg && tg.sendData) {
+                try { tg.sendData(JSON.stringify({ topD, tiersCount, approxWeight, notes })); } catch(e) {}
+            }
+        }
+
+        function copyResult() {
+            const text = document.getElementById('result').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Расчет скопирован!');
+            });
         }
     </script>
 </body>
