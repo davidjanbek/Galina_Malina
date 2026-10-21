@@ -146,8 +146,7 @@
         }
 
         // Автозагрузка ключа из памяти
-        const savedKey = localStorage.getItem('gemini_api_key') || '';
-        document.getElementById('api_key').value = savedKey;
+        document.getElementById('api_key').value = localStorage.getItem('gemini_api_key') || '';
 
         function saveKey(val) {
             localStorage.setItem('gemini_api_key', val.trim());
@@ -168,9 +167,9 @@
                     img.style.display = 'block';
                     document.getElementById('upload-label').innerText = '✅ Фото загружено: ' + file.name;
                     
-                    // Извлекаем чистую Base64-строку
+                    // Берем чистую Base64-строку без префикса data:image/...
                     const parts = e.target.result.split(',');
-                    selectedBase64 = parts[1] || parts[0];
+                    selectedBase64 = parts.length > 1 ? parts[1] : parts[0];
                 };
                 reader.readAsDataURL(file);
             }
@@ -224,20 +223,19 @@
 ───────────────────────────
 Сформировано автоматически ИИ-ассистентом кондитера`;
 
-            // Точки входа и модели Gemini API
-            const apiEndpoints = [
-                `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-                `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`
+            const modelsToTry = [
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-latest',
+                'gemini-2.0-flash-exp'
             ];
 
             let success = false;
-            let lastErrorMessage = '';
+            let lastError = '';
 
-            for (const endpoint of apiEndpoints) {
+            for (const modelName of modelsToTry) {
                 try {
-                    const response = await fetch(endpoint, {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -245,8 +243,8 @@
                                 parts: [
                                     { text: promptText },
                                     {
-                                        inlineData: {
-                                            mimeType: selectedMime,
+                                        inline_data: {
+                                            mime_type: selectedMime,
                                             data: selectedBase64
                                         }
                                     }
@@ -257,7 +255,7 @@
 
                     const data = await response.json();
 
-                    if (response.ok && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
+                    if (response.ok && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
                         const aiResponse = data.candidates[0].content.parts[0].text;
                         resDiv.innerText = aiResponse;
                         resDiv.style.display = 'block';
@@ -265,15 +263,15 @@
                         success = true;
                         break;
                     } else if (data.error) {
-                        lastErrorMessage = data.error.message || 'Ошибка API';
+                        lastError = data.error.message || ('Ошибка в модели ' + modelName);
                     }
                 } catch (err) {
-                    lastErrorMessage = err.message;
+                    lastError = err.message;
                 }
             }
 
             if (!success) {
-                alert('Не удалось вызвать ИИ: ' + lastErrorMessage + '\n\nПроверьте ваш API ключ и доступ к AI Studio.');
+                alert('Не удалось вызвать ИИ: ' + lastError + '\n\nПроверьте ваш API ключ и доступ к AI Studio.');
             }
 
             btn.innerText = '🤖 Проанализировать фото через ИИ';
