@@ -33,23 +33,6 @@
         }
         h2 { margin-top: 0; font-size: 20px; text-align: center; color: #2d3436; }
         
-        .upload-area {
-            border: 2px dashed #b2bec3;
-            border-radius: 12px;
-            padding: 14px;
-            text-align: center;
-            background: #fafafa;
-            cursor: pointer;
-            margin-bottom: 14px;
-        }
-        .upload-area img {
-            max-width: 100%;
-            max-height: 160px;
-            border-radius: 8px;
-            display: none;
-            margin-top: 8px;
-        }
-        
         .form-row {
             display: flex;
             gap: 10px;
@@ -59,7 +42,7 @@
             flex: 1;
         }
         label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #636e72; }
-        input, select {
+        input {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border-color);
@@ -124,12 +107,6 @@
 <body>
     <div class="container">
         <h2>🎂 Расчет параметров торта</h2>
-        
-        <div class="upload-area" onclick="document.getElementById('file-input').click()">
-            <span id="upload-label">📸 Прикрепить фото эскиза / референса</span>
-            <img id="preview" alt="Эскиз">
-            <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
-        </div>
 
         <div class="form-row">
             <div class="form-group">
@@ -145,7 +122,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label>Шаг ярусов (см):</label>
-                <input type="number" id="step" value="5" min="2" max="15">
+                <input type="number" id="step" value="5" min="1" max="15">
             </div>
             <div class="form-group">
                 <label>Высота яруса (см):</label>
@@ -154,13 +131,8 @@
         </div>
 
         <div class="form-group">
-            <label>Плотность / тип начинки:</label>
-            <select id="density">
-                <option value="0.00048">Муссовая / легкая (~0.5 кг/л)</option>
-                <option value="0.00065" selected>Стандартная бисквитная (~0.65 кг/л)</option>
-                <option value="0.00085">Плотная (Сникерс, орехи, карамель)</option>
-                <option value="0.00100">Тяжелая (ганаш, мастичный декор)</option>
-            </select>
+            <label>Плотность начинки (кг/л): *</label>
+            <input type="number" id="density" step="0.01" value="0.65" placeholder="например 0.65 или 0.85">
         </div>
 
         <div class="form-group">
@@ -186,19 +158,6 @@
             window.Telegram.WebApp.expand();
         }
 
-        function handleFileSelect(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById('preview');
-                    img.src = e.target.result;
-                    img.style.display = 'block';
-                    document.getElementById('upload-label').innerText = '✅ Фото прикреплено';
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
         function calculateCake() {
             const errorBox = document.getElementById('error-box');
             const resultBox = document.getElementById('result');
@@ -211,14 +170,16 @@
             // Считывание значений
             const topDInput = document.getElementById('top_d').value;
             const tiersInput = document.getElementById('tiers').value;
+            const densityInput = document.getElementById('density').value;
 
-            // Валидация: проверка обязательных данных
+            // Валидация обязательных данных
             let missingFields = [];
             if (!topDInput || parseFloat(topDInput) <= 0) missingFields.push('Диаметр верхнего яруса');
             if (!tiersInput || parseInt(tiersInput) <= 0) missingFields.push('Количество ярусов');
+            if (!densityInput || parseFloat(densityInput) <= 0) missingFields.push('Плотность начинки (кг/л)');
 
             if (missingFields.length > 0) {
-                errorBox.innerHTML = '⚠️ <b>Недостаточно данных для расчета!</b><br>Пожалуйста, укажите: ' + missingFields.join(', ') + '.';
+                errorBox.innerHTML = '⚠️ <b>Недостаточно данных для расчета!</b><br>Заполните обязательные поля: ' + missingFields.join(', ') + '.';
                 errorBox.style.display = 'block';
                 return;
             }
@@ -227,11 +188,9 @@
             const tiersCount = parseInt(tiersInput);
             const stepD = parseFloat(document.getElementById('step').value) || 5;
             const tierH = parseFloat(document.getElementById('height').value) || 12;
-            const densitySelect = document.getElementById('density');
-            const densityValue = parseFloat(densitySelect.value);
-            const densityName = densitySelect.options[densitySelect.selectedIndex].text.split(' (')[0];
+            const densityKgL = parseFloat(densityInput); // Введённая пользователем плотность в кг/л
             const targetWeight = parseFloat(document.getElementById('target_weight').value);
-            const notes = document.getElementById('notes').value.trim() || 'По эскизу заказчика';
+            const notes = document.getElementById('notes').value.trim() || 'Без особых примечаний';
 
             let tiersList = [];
             let totalHeight = 0;
@@ -243,9 +202,11 @@
                 tiersList.push(`• ${i}-й ярус: <b>Ø ${currentD} см</b> × ${tierH} см`);
                 totalHeight += tierH;
                 
-                // Объём цилиндра = π * r² * h
-                let volume = Math.PI * Math.pow(currentD / 2, 2) * tierH;
-                approxWeight += volume * densityValue;
+                // Объём цилиндра в см³ = π * r² * h
+                let volumeCm3 = Math.PI * Math.pow(currentD / 2, 2) * tierH;
+                // Объём в литрах = volumeCm3 / 1000
+                // Вес (кг) = Объём (л) * Плотность (кг/л)
+                approxWeight += (volumeCm3 / 1000) * densityKgL;
                 lastD = currentD;
             }
 
@@ -256,7 +217,7 @@
             let specHtml = `<b>📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b><br>`;
             specHtml += `───────────────────────────<br>`;
             specHtml += `🎂 <b>Ярусов:</b> ${tiersCount}<br>`;
-            specHtml += `🍰 <b>Тип начинки:</b> ${densityName}<br>`;
+            specHtml += `⚖️ <b>Плотность начинки:</b> ${densityKgL} кг/л<br>`;
             specHtml += `📏 <b>Верхний диаметр:</b> Ø ${topD} см<br><br>`;
             specHtml += `📐 <b>РАСЧЕТ ЯРУСОВ (Диаметр × Высота):</b><br>`;
             specHtml += tiersList.join('<br>') + `<br><br>`;
@@ -266,12 +227,12 @@
             specHtml += `• Центральная ось: <b>${axisH} см</b><br>`;
             specHtml += `• Ориентировочный вес: <b>~${finalWeightStr} кг</b><br>`;
 
-            // Проверка и сравнение с желаемым весом от клиента
+            // Сравнение с желаемым весом от клиента
             if (!isNaN(targetWeight) && targetWeight > 0) {
                 const diff = Math.abs(approxWeight - targetWeight).toFixed(1);
                 specHtml += `<br>🎯 <b>Заявленный вес клиентом:</b> ${targetWeight} кг<br>`;
-                if (Math.abs(approxWeight - targetWeight) > 1.0) {
-                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Поправьте диаметры или высоту.</i><br>`;
+                if (Math.abs(approxWeight - targetWeight) > 0.8) {
+                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скоректируйте диаметры или высоту.</i><br>`;
                 } else {
                     specHtml += `✅ <i>Размеры полностью соответствуют заявленному весу.</i><br>`;
                 }
