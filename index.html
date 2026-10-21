@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Расчет параметров торта</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f6f8; color: #2d3436; margin: 0; padding: 16px; }
+        .container { background: #ffffff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); max-width: 400px; margin: 0 auto; }
+        h2 { margin-top: 0; font-size: 20px; text-align: center; color: #2d3436; }
+        .upload-area { border: 2px dashed #b2bec3; border-radius: 12px; padding: 20px; text-align: center; background: #fafafa; cursor: pointer; margin-bottom: 16px; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #dfe6e9; border-radius: 10px; font-size: 15px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #d63031; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🍰 Расчет торта</h2>
+        <div class="upload-area" onclick="document.getElementById('file-input').click()">
+            <span id="upload-label">📸 Загрузить фото эскиза / торта</span>
+            <input type="file" id="file-input" accept="image/*" style="display:none" onchange="updateLabel(this)">
+        </div>
+        <div class="form-group">
+            <label>Известный диаметр верхнего яруса (см):</label>
+            <input type="number" id="top_d" value="15">
+        </div>
+        <div class="form-group">
+            <label>Количество ярусов:</label>
+            <select id="tiers">
+                <option value="1">1 ярус</option>
+                <option value="2">2 яруса</option>
+                <option value="3" selected>3 яруса</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Пожелания по декору и деталям:</label>
+            <input type="text" id="notes" placeholder="например: фигурка с короной, ~6.5 кг">
+        </div>
+        <button onclick="submitForm()">Сформировать расчет</button>
+    </div>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        function updateLabel(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('upload-label').innerText = '✅ Выбрано: ' + input.files[0].name;
+            }
+        }
+        function submitForm() {
+            const payload = {
+                top_d: parseInt(document.getElementById('top_d').value || 15),
+                tiers: parseInt(document.getElementById('tiers').value || 3),
+                notes: document.getElementById('notes').value || 'Без особых пожеланий'
+            };
+            tg.sendData(JSON.stringify(payload));
+        }
+    </script>
+</body>
+</html>
