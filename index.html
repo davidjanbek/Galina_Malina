@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Калькулятор параметров торта</title>
+    <title>Расчет параметров торта</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -26,7 +26,7 @@
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            max-width: 420px;
+            max-width: 400px;
             margin: 0 auto;
         }
         h2 {
@@ -72,14 +72,15 @@
             display: none;
             margin-top: 20px;
             padding: 16px;
-            background: #fdf6f6;
-            border: 1px solid #fab1a0;
+            background: #fff0f0;
+            border: 1px solid #ffbebe;
             border-radius: 12px;
             font-size: 14px;
-            line-height: 1.5;
-            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #2d3436;
         }
         .btn-copy {
+            display: none;
             width: 100%;
             padding: 12px;
             background: #2d3436;
@@ -89,13 +90,13 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 12px;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>🍰 Калькулятор параметров торта</h2>
+        <h2>🎂 Расчет торта</h2>
         
         <div class="upload-area" onclick="document.getElementById('file-input').click()">
             <span id="upload-label">📸 Загрузить фото эскиза / торта</span>
@@ -108,33 +109,35 @@
         </div>
 
         <div class="form-group">
-            <label>Количество ярусов (неограниченно):</label>
-            <input type="number" id="tiers" value="3" min="1" max="20" placeholder="Введите число ярусов">
+            <label>Количество ярусов (любое):</label>
+            <input type="number" id="tiers" value="3" min="1" max="20" placeholder="Укажите количество">
         </div>
 
         <div class="form-group">
-            <label>Шаг увеличения диаметра ярусов (см):</label>
+            <label>Шаг увеличения диаметра (см):</label>
             <input type="number" id="step" value="5" min="2" max="15">
         </div>
 
         <div class="form-group">
             <label>Пожелания по декору и деталям:</label>
-            <input type="text" id="notes" placeholder="например: фигурка с короной, розовая гамма">
+            <input type="text" id="notes" placeholder="например: фигурка с короной, ~6.5 кг">
         </div>
 
         <button class="btn-calc" onclick="calculateCake()">Сформировать расчет</button>
 
         <div id="result" class="result-card"></div>
-        <button id="copy-btn" class="btn-copy" style="display:none;" onclick="copyResult()">📋 Скопировать расчет</button>
+        <button id="copy-btn" class="btn-copy" onclick="copyResult()">📋 Скопировать расчет</button>
     </div>
 
     <script>
-        const tg = window.Telegram?.WebApp;
-        if (tg) tg.expand();
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
 
         function updateLabel(input) {
             if (input.files && input.files[0]) {
-                document.getElementById('upload-label').innerText = '✅ Фото выбрано: ' + input.files[0].name;
+                document.getElementById('upload-label').innerText = '✅ Выбрано: ' + input.files[0].name;
             }
         }
 
@@ -142,57 +145,53 @@
             const topD = parseInt(document.getElementById('top_d').value) || 15;
             const tiersCount = parseInt(document.getElementById('tiers').value) || 1;
             const stepD = parseInt(document.getElementById('step').value) || 5;
-            const notes = document.getElementById('notes').value || 'Без особых пожеланий';
+            const notes = document.getElementById('notes').value || 'По фото заказчика';
 
             let tiersList = [];
             let totalHeight = 0;
             let approxWeight = 0;
-            let bottomD = topD;
+            let lastD = topD;
 
             for (let i = 1; i <= tiersCount; i++) {
                 let currentD = topD + (i - 1) * stepD;
-                let currentH = 12; // Стандартная высота яруса
+                let currentH = 12;
                 tiersList.push(`• ${i}-й ярус: <b>Ø ${currentD} см</b> × ${currentH} см`);
                 totalHeight += currentH;
                 approxWeight += (Math.PI * Math.pow(currentD / 2, 2) * currentH) * 0.00065;
-                bottomD = currentD;
+                lastD = currentD;
             }
 
-            const substrateD = bottomD + 6;
+            const substrateD = lastD + 6;
             const axisH = totalHeight + 8;
             approxWeight = approxWeight.toFixed(1);
 
-            let spec = `📋 <b>СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b>\n`;
-            spec += `───────────────────────────\n`;
-            spec += `🎂 <b>Количество ярусов:</b> ${tiersCount}\n`;
-            spec += `📏 <b>Базовый диаметр (верхний):</b> Ø ${topD} см\n\n`;
-            spec += `📐 <b>РАСЧЕТ ЯРУСОВ (Диаметр × Высота):</b>\n`;
-            spec += tiersList.join('\n') + `\n\n`;
-            spec += `🛠 <b>КОНСТРУКТИВ И СБОРКА:</b>\n`;
-            spec += `• Рекомендуемая подложка: <b>Ø ${substrateD} см</b>\n`;
-            spec += `• Общая высота конструкции: <b>${totalHeight} см</b>\n`;
-            spec += `• Длина центральной оси: <b>${axisH} см</b>\n`;
-            spec += `• Ориентировочный вес: <b>~${approxWeight} кг</b>\n\n`;
-            spec += `💬 <b>Пожелания:</b> ${notes}\n`;
-            spec += `───────────────────────────\n`;
-            spec += `<i>Сформировано автоматически в едином стандарте.</i>`;
+            let specHtml = `<b>📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b><br>`;
+            specHtml += `───────────────────────────<br>`;
+            specHtml += `🎂 <b>Ярусов:</b> ${tiersCount}<br>`;
+            specHtml += `📏 <b>Верхний диаметр:</b> Ø ${topD} см<br><br>`;
+            specHtml += `📐 <b>РАСЧЕТ ЯРУСОВ (Диаметр × Высота):</b><br>`;
+            specHtml += tiersList.join('<br>') + `<br><br>`;
+            specHtml += `🛠 <b>КОНСТРУКТИВ И СБОРКА:</b><br>`;
+            specHtml += `• Подложка: <b>Ø ${substrateD} см</b><br>`;
+            specHtml += `• Высота конструкции: <b>${totalHeight} см</b><br>`;
+            specHtml += `• Центральная ось: <b>${axisH} см</b><br>`;
+            specHtml += `• Ориентировочный вес: <b>~${approxWeight} кг</b><br><br>`;
+            specHtml += `💬 <b>Пожелания:</b> ${notes}<br>`;
+            specHtml += `───────────────────────────<br>`;
+            specHtml += `<i>Сформировано автоматически</i>`;
 
             const resDiv = document.getElementById('result');
-            resDiv.innerHTML = spec;
+            resDiv.innerHTML = specHtml;
             resDiv.style.display = 'block';
 
-            const copyBtn = document.getElementById('copy-btn');
-            copyBtn.style.display = 'block';
-
-            if (tg && tg.sendData) {
-                try { tg.sendData(JSON.stringify({ topD, tiersCount, approxWeight, notes })); } catch(e) {}
-            }
+            document.getElementById('copy-btn').style.display = 'block';
         }
 
         function copyResult() {
-            const text = document.getElementById('result').innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Расчет скопирован!');
+            const container = document.getElementById('result');
+            const textToCopy = container.innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert('Спецификация скопирована в буфер обмена!');
             });
         }
     </script>
