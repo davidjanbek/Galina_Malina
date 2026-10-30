@@ -31,7 +31,34 @@
             max-width: 440px;
             margin: 0 auto;
         }
-        h2 { margin-top: 0; font-size: 20px; text-align: center; color: #2d3436; }
+        h2 { margin-top: 0; font-size: 20px; text-align: center; color: #2d3436; margin-bottom: 16px; }
+
+        /* Переключатель формы */
+        .shape-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: #f1f2f6;
+            padding: 4px;
+            border-radius: 10px;
+        }
+        .shape-btn {
+            flex: 1;
+            padding: 9px;
+            border: none;
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #57606f;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .shape-btn.active {
+            background: #ffffff;
+            color: var(--accent-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
         
         .form-row {
             display: flex;
@@ -81,7 +108,7 @@
             color: #2f3542;
         }
 
-        /* Шапка столбцов над ярусами */
+        /* Заголовки столбцов над ярусами */
         .tier-header-row {
             display: flex;
             align-items: center;
@@ -179,14 +206,20 @@
     <div class="container">
         <h2>🎂 Расчет параметров торта</h2>
 
+        <!-- Переключатель формы -->
+        <div class="shape-selector">
+            <button type="button" id="btn-shape-round" class="shape-btn active" onclick="setShape('round')">🟡 Круглый</button>
+            <button type="button" id="btn-shape-square" class="shape-btn" onclick="setShape('square')">◽ Квадратный</button>
+        </div>
+
         <div class="form-row">
             <div class="form-group">
                 <label>Ярусов (шт): *</label>
                 <input type="number" id="tiers" placeholder="например 3" value="3" min="1" max="15" onchange="generateTierRows()">
             </div>
             <div class="form-group">
-                <label>Верхний ярус (Ø см): *</label>
-                <input type="number" id="top_d" placeholder="например 15" value="15" min="5" max="100" onchange="generateTierRows()">
+                <label id="lbl-top-size">Верхний ярус (Ø см): *</label>
+                <input type="number" id="top_size" placeholder="например 15" value="15" min="5" max="100" onchange="generateTierRows()">
             </div>
         </div>
 
@@ -201,14 +234,14 @@
             </div>
         </div>
 
-        <button type="button" class="btn-toggle-tiers" onclick="toggleTiersTable()">⚙️ Настроить высоту/диаметр каждого яруса</button>
+        <button type="button" class="btn-toggle-tiers" onclick="toggleTiersTable()">⚙️ Настроить параметры каждого яруса</button>
 
         <div id="tiers-table-container" class="tiers-table-container">
             <div class="tiers-table-title">Параметры каждого яруса:</div>
             
             <div class="tier-header-row">
                 <span class="th-label">Ярус</span>
-                <span class="th-col">Диаметр (см)</span>
+                <span id="th-size-label" class="th-col">Диаметр (см)</span>
                 <span class="th-spacer"></span>
                 <span class="th-col">Высота (см)</span>
             </div>
@@ -239,7 +272,30 @@
             window.Telegram.WebApp.expand();
         }
 
+        let currentShape = 'round'; // 'round' или 'square'
         let isCustomTableOpen = false;
+
+        function setShape(shape) {
+            currentShape = shape;
+            const btnRound = document.getElementById('btn-shape-round');
+            const btnSquare = document.getElementById('btn-shape-square');
+            const lblTopSize = document.getElementById('lbl-top-size');
+            const thSizeLabel = document.getElementById('th-size-label');
+
+            if (shape === 'round') {
+                btnRound.classList.add('active');
+                btnSquare.classList.remove('active');
+                lblTopSize.innerText = 'Верхний ярус (Ø см): *';
+                thSizeLabel.innerText = 'Диаметр (см)';
+            } else {
+                btnSquare.classList.add('active');
+                btnRound.classList.remove('active');
+                lblTopSize.innerText = 'Верхний ярус (сторона см): *';
+                thSizeLabel.innerText = 'Сторона (см)';
+            }
+
+            generateTierRows();
+        }
 
         function toggleTiersTable() {
             const container = document.getElementById('tiers-table-container');
@@ -252,21 +308,23 @@
 
         function generateTierRows() {
             const tiersCount = parseInt(document.getElementById('tiers').value) || 0;
-            const topD = parseFloat(document.getElementById('top_d').value) || 15;
+            const topSize = parseFloat(document.getElementById('top_size').value) || 15;
             const stepD = parseFloat(document.getElementById('step').value) || 5;
             const baseH = parseFloat(document.getElementById('height').value) || 12;
             const listDiv = document.getElementById('tiers-inputs-list');
 
+            const sizePlaceholder = currentShape === 'round' ? 'Ø см' : 'см';
+
             let html = '';
             for (let i = 1; i <= tiersCount; i++) {
-                const autoD = topD + (i - 1) * stepD;
-                const existingD = document.getElementById(`tier_d_${i}`) ? document.getElementById(`tier_d_${i}`).value : autoD;
+                const autoSize = topSize + (i - 1) * stepD;
+                const existingSize = document.getElementById(`tier_size_${i}`) ? document.getElementById(`tier_size_${i}`).value : autoSize;
                 const existingH = document.getElementById(`tier_h_${i}`) ? document.getElementById(`tier_h_${i}`).value : baseH;
 
                 html += `
                 <div class="tier-row">
                     <span class="tier-num">${i}-й ярус:</span>
-                    <input type="number" id="tier_d_${i}" value="${existingD}" placeholder="Ø см">
+                    <input type="number" id="tier_size_${i}" value="${existingSize}" placeholder="${sizePlaceholder}">
                     <span class="tier-sep">×</span>
                     <input type="number" id="tier_h_${i}" value="${existingH}" placeholder="h см">
                 </div>`;
@@ -286,12 +344,12 @@
             copyBtn.style.display = 'none';
 
             const tiersCount = parseInt(document.getElementById('tiers').value);
-            const topDInput = document.getElementById('top_d').value;
+            const topSizeInput = document.getElementById('top_size').value;
             const densityInput = document.getElementById('density').value;
 
             let missingFields = [];
             if (!tiersCount || tiersCount <= 0) missingFields.push('Количество ярусов');
-            if (!topDInput || parseFloat(topDInput) <= 0) missingFields.push('Диаметр верхнего яруса');
+            if (!topSizeInput || parseFloat(topSizeInput) <= 0) missingFields.push(currentShape === 'round' ? 'Диаметр верхнего яруса' : 'Сторона верхнего яруса');
             if (!densityInput || parseFloat(densityInput) <= 0) missingFields.push('Плотность начинки (кг/л)');
 
             if (missingFields.length > 0) {
@@ -306,43 +364,62 @@
             let tiersList = [];
             let totalHeight = 0;
             let approxWeight = 0;
-            let maxD = 0;
+            let maxSize = 0;
 
             for (let i = 1; i <= tiersCount; i++) {
-                const dElem = document.getElementById(`tier_d_${i}`);
+                const sizeElem = document.getElementById(`tier_size_${i}`);
                 const hElem = document.getElementById(`tier_h_${i}`);
 
-                const currentD = dElem ? parseFloat(dElem.value) : (parseFloat(topDInput) + (i - 1) * 5);
+                const currentSize = sizeElem ? parseFloat(sizeElem.value) : (parseFloat(topSizeInput) + (i - 1) * 5);
                 const currentH = hElem ? parseFloat(hElem.value) : 12;
 
-                if (!currentD || !currentH || currentD <= 0 || currentH <= 0) {
-                    errorBox.innerHTML = `⚠️ <b>Ошибка в параметрах ${i}-го яруса!</b><br>Укажите корректный диаметр и высоту.`;
+                if (!currentSize || !currentH || currentSize <= 0 || currentH <= 0) {
+                    errorBox.innerHTML = `⚠️ <b>Ошибка в параметрах ${i}-го яруса!</b><br>Укажите корректный размер и высоту.`;
                     errorBox.style.display = 'block';
                     return;
                 }
 
                 totalHeight += currentH;
-                if (currentD > maxD) maxD = currentD;
+                if (currentSize > maxSize) maxSize = currentSize;
 
-                const volumeCm3 = Math.PI * Math.pow(currentD / 2, 2) * currentH;
-                const tierWeight = (volumeCm3 / 1000) * densityKgL;
-                approxWeight += tierWeight;
-
-                tiersList.push(`• <b>${i}-й ярус:</b> Ø ${currentD} см × ${currentH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
+                let volumeCm3 = 0;
+                if (currentShape === 'round') {
+                    // Цилиндр: π * r² * h
+                    volumeCm3 = Math.PI * Math.pow(currentSize / 2, 2) * currentH;
+                    const tierWeight = (volumeCm3 / 1000) * densityKgL;
+                    approxWeight += tierWeight;
+                    tiersList.push(`• <b>${i}-й ярус:</b> Ø ${currentSize} см × ${currentH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
+                } else {
+                    // Квадратный ярус: a² * h
+                    volumeCm3 = Math.pow(currentSize, 2) * currentH;
+                    const tierWeight = (volumeCm3 / 1000) * densityKgL;
+                    approxWeight += tierWeight;
+                    tiersList.push(`• <b>${i}-й ярус:</b> ◽ ${currentSize}×${currentSize} см, h=${currentH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
+                }
             }
 
-            const substrateD = maxD + 6;
+            const substrateSize = maxSize + 6;
             const axisH = totalHeight + 8;
             const finalWeightStr = approxWeight.toFixed(1);
+            const shapeTitle = currentShape === 'round' ? 'Круглый (цилиндрический)' : 'Квадратный';
 
             let specHtml = `<b>📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b><br>`;
             specHtml += `───────────────────────────<br>`;
-            specHtml += `🎂 <b>Количество ярусов:</b> ${tiersCount}<br>`;
+            specHtml += `🎂 <b>Форма торта:</b> ${shapeTitle}<br>`;
+            specHtml += `🍰 <b>Количество ярусов:</b> ${tiersCount}<br>`;
             specHtml += `⚖️ <b>Плотность начинки:</b> ${densityKgL} кг/л<br><br>`;
-            specHtml += `📐 <b>ПАРАМЕТРЫ ЯРУСОВ (Ø × Высота | Вес):</b><br>`;
+            specHtml += `📐 <b>ПАРАМЕТРЫ ЯРУСОВ (Размер × Высота | Вес):</b><br>`;
             specHtml += tiersList.join('<br>') + `<br><br>`;
             specHtml += `🛠 <b>КОНСТРУКТИВ И СБОРКА:</b><br>`;
-            specHtml += `• Рекомендуемая подложка: <b>Ø ${substrateD} см</b><br>`;
+            
+            if (currentShape === 'round') {
+                specHtml += `• Рекомендуемая подложка: <b>Ø ${substrateSize} см</b><br>`;
+            } else {
+                specHtml += `• Квадратная подложка: <b>${substrateSize}×${substrateSize} см</b><br>`;
+                const diag = Math.round(maxSize * Math.SQRT2 + 6);
+                specHtml += `• <i>(или круглая подложка по диагонали: Ø ~${diag} см)</i><br>`;
+            }
+
             specHtml += `• Общая высота конструкции: <b>${totalHeight} см</b><br>`;
             specHtml += `• Центральная ось (длина): <b>${axisH} см</b><br>`;
             specHtml += `• <b>Итоговый расчетный вес: ~${finalWeightStr} кг</b><br>`;
@@ -351,7 +428,7 @@
                 const diff = Math.abs(approxWeight - targetWeight).toFixed(1);
                 specHtml += `<br>🎯 <b>Заявленный вес клиентом:</b> ${targetWeight} кг<br>`;
                 if (Math.abs(approxWeight - targetWeight) > 0.8) {
-                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скорректируйте диаметры или высоту ярусов.</i><br>`;
+                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скорректируйте размеры или высоту ярусов.</i><br>`;
                 } else {
                     specHtml += `✅ <i>Размеры идеально соответствуют заявленному весу.</i><br>`;
                 }
