@@ -204,7 +204,7 @@
     <div class="container">
         <h2>🎂 Расчет параметров торта</h2>
 
-        <!-- Выбор геометрии -->
+        <!-- Форма торта -->
         <div class="shape-selector">
             <button type="button" id="btn-shape-round" class="shape-btn active" onclick="setShape('round')">🟡 Круглый</button>
             <button type="button" id="btn-shape-square" class="shape-btn" onclick="setShape('square')">◽ Квадратный</button>
@@ -213,34 +213,34 @@
         <div class="form-row">
             <div class="form-group">
                 <label>Ярусов (шт): *</label>
-                <input type="number" id="tiers" placeholder="например 3" value="3" min="1" max="15" onchange="generateTierRows()">
+                <input type="number" id="tiers" placeholder="например 3" value="3" min="1" max="15">
             </div>
             <div class="form-group">
                 <label id="lbl-base-size">1-й ярус (нижний, Ø см): *</label>
-                <input type="number" id="base_size" placeholder="например 25" value="25" min="5" max="120" onchange="generateTierRows()">
+                <input type="number" id="base_size" placeholder="например 20" value="20" min="5" max="120">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
                 <label>Шаг ширины к верху (см):</label>
-                <input type="number" id="step_size" value="5" min="0" max="25" title="На сколько см каждый следующий ярус уже" onchange="generateTierRows()">
+                <input type="number" id="step_size" value="4" min="0" max="30">
             </div>
             <div class="form-group">
                 <label>Высота 1-го яруса (см): *</label>
-                <input type="number" id="base_height" value="12" min="5" max="35" onchange="generateTierRows()">
+                <input type="number" id="base_height" value="19" min="5" max="40">
             </div>
         </div>
 
         <div class="form-group">
             <label>Шаг высоты к верху (см, 0 = одинаковая):</label>
-            <input type="number" id="step_height" value="0" min="-10" max="10" placeholder="0 или например 2" onchange="generateTierRows()">
+            <input type="number" id="step_height" value="3" min="-15" max="15" placeholder="0">
         </div>
 
         <button type="button" class="btn-toggle-tiers" onclick="toggleTiersTable()">⚙️ Настроить параметры каждого яруса вручную</button>
 
         <div id="tiers-table-container" class="tiers-table-container">
-            <div class="tiers-table-title">Индивидуальные параметры (от низа к верху):</div>
+            <div class="tiers-table-title">Индивидуальные параметры (снизу вверх):</div>
             
             <div class="tier-header-row">
                 <span class="th-label">Ярус</span>
@@ -254,7 +254,7 @@
 
         <div class="form-group">
             <label>Плотность начинки (кг/л): *</label>
-            <input type="number" id="density" step="0.01" value="0.65" placeholder="например 0.65 или 0.85">
+            <input type="number" id="density" step="0.01" value="0.76" placeholder="0.76">
         </div>
 
         <div class="form-group">
@@ -296,8 +296,9 @@
                 lblBaseSize.innerText = '1-й ярус (нижний, сторона см): *';
                 thSizeLabel.innerText = 'Сторона (см)';
             }
-
-            generateTierRows();
+            if (isCustomTableOpen) {
+                renderTiersInputs();
+            }
         }
 
         function toggleTiersTable() {
@@ -305,13 +306,13 @@
             isCustomTableOpen = !isCustomTableOpen;
             container.style.display = isCustomTableOpen ? 'block' : 'none';
             if (isCustomTableOpen) {
-                generateTierRows();
+                renderTiersInputs();
             }
         }
 
-        function generateTierRows() {
-            const tiersCount = parseInt(document.getElementById('tiers').value) || 0;
-            const baseSize = parseFloat(document.getElementById('base_size').value) || 25;
+        function renderTiersInputs() {
+            const tiersCount = parseInt(document.getElementById('tiers').value) || 3;
+            const baseSize = parseFloat(document.getElementById('base_size').value) || 20;
             const stepSize = parseFloat(document.getElementById('step_size').value) || 0;
             const baseHeight = parseFloat(document.getElementById('base_height').value) || 12;
             const stepHeight = parseFloat(document.getElementById('step_height').value) || 0;
@@ -321,12 +322,8 @@
 
             let html = '';
             for (let i = 1; i <= tiersCount; i++) {
-                // 1-й ярус — самый нижний и широкий. Каждый следующий ярус вверх уменьшается на stepSize
-                const calcSize = Math.max(5, baseSize - (i - 1) * stepSize);
-                const calcH = Math.max(5, baseHeight + (i - 1) * stepHeight);
-
-                const existingSize = document.getElementById(`tier_size_${i}`) ? document.getElementById(`tier_size_${i}`).value : calcSize;
-                const existingH = document.getElementById(`tier_h_${i}`) ? document.getElementById(`tier_h_${i}`).value : calcH;
+                const autoSize = Math.max(5, baseSize - (i - 1) * stepSize);
+                const autoH = Math.max(5, baseHeight + (i - 1) * stepHeight);
 
                 let tierLabel = `${i}-й ярус`;
                 if (i === 1) tierLabel += ' (низ):';
@@ -336,15 +333,13 @@
                 html += `
                 <div class="tier-row">
                     <span class="tier-num">${tierLabel}</span>
-                    <input type="number" id="tier_size_${i}" value="${existingSize}" placeholder="${sizePlaceholder}">
+                    <input type="number" id="tier_size_${i}" value="${autoSize}" placeholder="${sizePlaceholder}">
                     <span class="tier-sep">×</span>
-                    <input type="number" id="tier_h_${i}" value="${existingH}" placeholder="h см">
+                    <input type="number" id="tier_h_${i}" value="${autoH}" placeholder="h см">
                 </div>`;
             }
             listDiv.innerHTML = html;
         }
-
-        generateTierRows();
 
         function calculateCake() {
             const errorBox = document.getElementById('error-box');
@@ -355,26 +350,26 @@
             resultBox.style.display = 'none';
             copyBtn.style.display = 'none';
 
+            // Считываем значения напрямую из полей формы
             const tiersCount = parseInt(document.getElementById('tiers').value);
-            const baseSizeInput = document.getElementById('base_size').value;
-            const densityInput = document.getElementById('density').value;
+            const baseSize = parseFloat(document.getElementById('base_size').value);
+            const baseHeight = parseFloat(document.getElementById('base_height').value);
+            const stepSize = parseFloat(document.getElementById('step_size').value) || 0;
+            const stepHeight = parseFloat(document.getElementById('step_height').value) || 0;
+            const densityKgL = parseFloat(document.getElementById('density').value);
+            const targetWeight = parseFloat(document.getElementById('target_weight').value);
 
-            let missingFields = [];
-            if (!tiersCount || tiersCount <= 0) missingFields.push('Количество ярусов');
-            if (!baseSizeInput || parseFloat(baseSizeInput) <= 0) missingFields.push(currentShape === 'round' ? 'Диаметр нижнего яруса' : 'Сторона нижнего яруса');
-            if (!densityInput || parseFloat(densityInput) <= 0) missingFields.push('Плотность начинки (кг/л)');
+            let missing = [];
+            if (!tiersCount || tiersCount <= 0) missing.push('Количество ярусов');
+            if (!baseSize || baseSize <= 0) missing.push(currentShape === 'round' ? 'Диаметр 1-го яруса' : 'Сторона 1-го яруса');
+            if (!baseHeight || baseHeight <= 0) missing.push('Высота 1-го яруса');
+            if (!densityKgL || densityKgL <= 0) missing.push('Плотность начинки (кг/л)');
 
-            if (missingFields.length > 0) {
-                errorBox.innerHTML = '⚠️ <b>Недостаточно данных для расчета!</b><br>Заполните: ' + missingFields.join(', ') + '.';
+            if (missing.length > 0) {
+                errorBox.innerHTML = '⚠️ <b>Недостаточно данных!</b><br>Заполните: ' + missing.join(', ') + '.';
                 errorBox.style.display = 'block';
                 return;
             }
-
-            const densityKgL = parseFloat(densityInput);
-            const targetWeight = parseFloat(document.getElementById('target_weight').value);
-            const stepSize = parseFloat(document.getElementById('step_size').value) || 0;
-            const baseHeight = parseFloat(document.getElementById('base_height').value) || 12;
-            const stepHeight = parseFloat(document.getElementById('step_height').value) || 0;
 
             let tiersList = [];
             let totalHeight = 0;
@@ -382,23 +377,27 @@
             let bottomTierSize = 0;
 
             for (let i = 1; i <= tiersCount; i++) {
-                const sizeElem = document.getElementById(`tier_size_${i}`);
-                const hElem = document.getElementById(`tier_h_${i}`);
+                let tierSize = 0;
+                let tierH = 0;
 
-                const fallbackSize = Math.max(5, parseFloat(baseSizeInput) - (i - 1) * stepSize);
-                const fallbackH = Math.max(5, baseHeight + (i - 1) * stepHeight);
+                // Если ручная таблица открыта пользователем, считываем ее инпуты
+                if (isCustomTableOpen && document.getElementById(`tier_size_${i}`) && document.getElementById(`tier_h_${i}`)) {
+                    tierSize = parseFloat(document.getElementById(`tier_size_${i}`).value);
+                    tierH = parseFloat(document.getElementById(`tier_h_${i}`).value);
+                } else {
+                    // Иначе СТРОГО по формуле введенных шагов
+                    tierSize = Math.max(5, baseSize - (i - 1) * stepSize);
+                    tierH = Math.max(5, baseHeight + (i - 1) * stepHeight);
+                }
 
-                const currentSize = sizeElem ? parseFloat(sizeElem.value) : fallbackSize;
-                const currentH = hElem ? parseFloat(hElem.value) : fallbackH;
-
-                if (!currentSize || !currentH || currentSize <= 0 || currentH <= 0) {
-                    errorBox.innerHTML = `⚠️ <b>Ошибка в параметрах ${i}-го яруса!</b><br>Укажите корректный размер и высоту.`;
+                if (!tierSize || !tierH || tierSize <= 0 || tierH <= 0) {
+                    errorBox.innerHTML = `⚠️ <b>Ошибка в параметрах ${i}-го яруса!</b> Проверьте числа.`;
                     errorBox.style.display = 'block';
                     return;
                 }
 
-                if (i === 1) bottomTierSize = currentSize;
-                totalHeight += currentH;
+                if (i === 1) bottomTierSize = tierSize;
+                totalHeight += tierH;
 
                 let volumeCm3 = 0;
                 let tierTag = `${i}-й ярус`;
@@ -406,15 +405,17 @@
                 else if (i === tiersCount) tierTag += ' (верх)';
 
                 if (currentShape === 'round') {
-                    volumeCm3 = Math.PI * Math.pow(currentSize / 2, 2) * currentH;
+                    // π * r² * h
+                    volumeCm3 = Math.PI * Math.pow(tierSize / 2, 2) * tierH;
                     const tierWeight = (volumeCm3 / 1000) * densityKgL;
                     approxWeight += tierWeight;
-                    tiersList.push(`• <b>${tierTag}:</b> Ø ${currentSize} см × ${currentH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
+                    tiersList.push(`• <b>${tierTag}:</b> Ø ${tierSize} см × ${tierH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
                 } else {
-                    volumeCm3 = Math.pow(currentSize, 2) * currentH;
+                    // a² * h
+                    volumeCm3 = Math.pow(tierSize, 2) * tierH;
                     const tierWeight = (volumeCm3 / 1000) * densityKgL;
                     approxWeight += tierWeight;
-                    tiersList.push(`• <b>${tierTag}:</b> ◽ ${currentSize}×${currentSize} см, h=${currentH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
+                    tiersList.push(`• <b>${tierTag}:</b> ◽ ${tierSize}×${tierSize} см, h=${tierH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
                 }
             }
 
@@ -426,7 +427,7 @@
             let specHtml = `<b>📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b><br>`;
             specHtml += `───────────────────────────<br>`;
             specHtml += `🎂 <b>Форма торта:</b> ${shapeTitle}<br>`;
-            specHtml += `🍰 <b>Количество ярусов:</b> ${tiersCount}<br>`;
+            specHtml += `🍰 <b>Ярусов:</b> ${tiersCount}<br>`;
             specHtml += `⚖️ <b>Плотность начинки:</b> ${densityKgL} кг/л<br><br>`;
             specHtml += `📐 <b>ЯРУСЫ (Снизу вверх: Размер × Высота | Вес):</b><br>`;
             specHtml += tiersList.join('<br>') + `<br><br>`;
@@ -437,7 +438,7 @@
             } else {
                 specHtml += `• Квадратная подложка: <b>${substrateSize}×${substrateSize} см</b><br>`;
                 const diag = Math.round(bottomTierSize * Math.SQRT2 + 6);
-                specHtml += `• <i>(или круглая подложка по диагонали: Ø ~${diag} см)</i><br>`;
+                specHtml += `• <i>(или круглая по диагонали: Ø ~${diag} см)</i><br>`;
             }
 
             specHtml += `• Общая высота конструкции: <b>${totalHeight} см</b><br>`;
@@ -448,7 +449,7 @@
                 const diff = Math.abs(approxWeight - targetWeight).toFixed(1);
                 specHtml += `<br>🎯 <b>Заявленный вес клиентом:</b> ${targetWeight} кг<br>`;
                 if (Math.abs(approxWeight - targetWeight) > 0.8) {
-                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скорректируйте размеры или высоту ярусов.</i><br>`;
+                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг!</i><br>`;
                 } else {
                     specHtml += `✅ <i>Размеры идеально соответствуют заявленному весу.</i><br>`;
                 }
