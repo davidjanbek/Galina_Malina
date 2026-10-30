@@ -185,32 +185,22 @@
             color: #2d3436;
         }
 
-        .actions-block {
-            display: none;
-            margin-top: 12px;
-            gap: 10px;
-            flex-direction: column;
-        }
-
-        .btn-action {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            box-sizing: border-box;
-            display: block;
-        }
         .btn-copy {
+            display: none;
+            width: 100%;
+            padding: 13px;
             background: #2d3436;
             color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+            text-align: center;
         }
-        .btn-send {
-            background: #0088cc;
-            color: #fff;
+        .btn-copy:active {
+            background: #1e272e;
         }
     </style>
 </head>
@@ -288,10 +278,7 @@
         <div id="error-box" class="error-card"></div>
         <div id="result" class="result-card"></div>
         
-        <div id="actions-block" class="actions-block">
-            <button class="btn-action btn-copy" onclick="copyResult()">📋 Скопировать расчёт</button>
-            <button class="btn-action btn-send" onclick="shareToTelegram()">✈️ Поделиться расчётом в Telegram</button>
-        </div>
+        <button id="copy-btn" class="btn-copy" onclick="copyResult()">📋 Скопировать расчёт</button>
     </div>
 
     <script>
@@ -369,11 +356,11 @@
         function calculateCake() {
             const errorBox = document.getElementById('error-box');
             const resultBox = document.getElementById('result');
-            const actionsBlock = document.getElementById('actions-block');
+            const copyBtn = document.getElementById('copy-btn');
 
             errorBox.style.display = 'none';
             resultBox.style.display = 'none';
-            actionsBlock.style.display = 'none';
+            copyBtn.style.display = 'none';
 
             const tiersCount = parseInt(document.getElementById('tiers').value);
             const baseSize = parseFloat(document.getElementById('base_size').value);
@@ -488,20 +475,24 @@
 
             resultBox.innerHTML = specHtml;
             resultBox.style.display = 'block';
-            actionsBlock.style.display = 'flex';
+            copyBtn.style.display = 'block';
         }
 
         function copyResult() {
             const container = document.getElementById('result');
             const textToCopy = container.innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                alert('Расчёт успешно скопирован в буфер обмена!');
-            }).catch(() => {
-                fallbackCopyText(textToCopy);
-            });
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    alert('Расчёт успешно скопирован в буфер обмена!');
+                }).catch(() => {
+                    fallbackCopy(textToCopy);
+                });
+            } else {
+                fallbackCopy(textToCopy);
+            }
         }
 
-        function fallbackCopyText(text) {
+        function fallbackCopy(text) {
             const textArea = document.createElement("textarea");
             textArea.value = text;
             document.body.appendChild(textArea);
@@ -509,26 +500,6 @@
             document.execCommand("copy");
             document.body.removeChild(textArea);
             alert('Расчёт успешно скопирован в буфер обмена!');
-        }
-
-        function shareToTelegram() {
-            const container = document.getElementById('result');
-            const textToShare = container.innerText;
-            
-            // 1. Сначала гарантированно копируем текст в буфер
-            navigator.clipboard.writeText(textToShare).catch(() => {
-                fallbackCopyText(textToShare);
-            });
-
-            // 2. Формируем универсальную ссылку для Telegram Share
-            const shareUrl = "[suspicious link removed]" + encodeURIComponent("[suspicious link removed]") + "&text=" + encodeURIComponent(textToShare);
-            
-            // 3. Вызываем через нативный WebApp API Telegram
-            if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
-                window.Telegram.WebApp.openTelegramLink(shareUrl);
-            } else {
-                window.location.href = shareUrl;
-            }
         }
     </script>
 </body>
