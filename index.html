@@ -185,18 +185,33 @@
             color: #2d3436;
         }
 
-        .btn-copy {
+        .actions-block {
             display: none;
+            margin-top: 12px;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        .btn-action {
             width: 100%;
             padding: 12px;
-            background: #2d3436;
-            color: #fff;
             border: none;
             border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 10px;
+            text-align: center;
+            text-decoration: none;
+            box-sizing: border-box;
+            display: block;
+        }
+        .btn-copy {
+            background: #2d3436;
+            color: #fff;
+        }
+        .btn-send {
+            background: #0088cc;
+            color: #fff;
         }
     </style>
 </head>
@@ -232,9 +247,15 @@
             </div>
         </div>
 
-        <div class="form-group">
-            <label>Уменьшение высоты к верху (см, 0 = одинаковая):</label>
-            <input type="number" id="step_height" value="3" min="0" max="15" placeholder="0 = все ярусы одной высоты">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Уменьшение высоты к верху (см):</label>
+                <input type="number" id="step_height" value="3" min="0" max="15" placeholder="0 = одинаковая">
+            </div>
+            <div class="form-group">
+                <label>Плотность (кг/л): *</label>
+                <input type="number" id="density" step="0.01" value="0.76" placeholder="0.76">
+            </div>
         </div>
 
         <button type="button" class="btn-toggle-tiers" onclick="toggleTiersTable()">⚙️ Настроить параметры каждого яруса вручную</button>
@@ -252,24 +273,32 @@
             <div id="tiers-inputs-list"></div>
         </div>
 
-        <div class="form-group">
-            <label>Плотность начинки (кг/л): *</label>
-            <input type="number" id="density" step="0.01" value="0.76" placeholder="0.76">
-        </div>
-
-        <div class="form-group">
-            <label>Желаемый вес от клиента (кг, необязательно):</label>
-            <input type="number" id="target_weight" step="0.1" placeholder="например 6.5">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Запас на декор (%):</label>
+                <input type="number" id="decor_percent" value="20" min="0" max="100" placeholder="например 20 или 35">
+            </div>
+            <div class="form-group">
+                <label>Желаемый вес (кг, необязательно):</label>
+                <input type="number" id="target_weight" step="0.1" placeholder="например 10.0">
+            </div>
         </div>
 
         <button class="btn-calc" onclick="calculateCake()">Сформировать расчет</button>
 
         <div id="error-box" class="error-card"></div>
         <div id="result" class="result-card"></div>
-        <button id="copy-btn" class="btn-copy" onclick="copyResult()">📋 Скопировать спецификацию</button>
+        
+        <div id="actions-block" class="actions-block">
+            <button class="btn-action btn-copy" onclick="copyResult()">📋 Скопировать спецификацию</button>
+            <button class="btn-action btn-send" onclick="sendToTelegram()">📲 Отправить заказ кондитеру</button>
+        </div>
     </div>
 
     <script>
+        // Имя пользователя кондитера или бота в Telegram (без @)
+        const CONFECTIONER_USERNAME = 'Galina_Malina_Cakebot';
+
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.ready();
             window.Telegram.WebApp.expand();
@@ -322,7 +351,6 @@
 
             let html = '';
             for (let i = 1; i <= tiersCount; i++) {
-                // И диаметр, и высота уменьшаются снизу вверх
                 const autoSize = Math.max(5, baseSize - (i - 1) * stepSize);
                 const autoH = Math.max(4, baseHeight - (i - 1) * stepHeight);
 
@@ -345,11 +373,11 @@
         function calculateCake() {
             const errorBox = document.getElementById('error-box');
             const resultBox = document.getElementById('result');
-            const copyBtn = document.getElementById('copy-btn');
+            const actionsBlock = document.getElementById('actions-block');
 
             errorBox.style.display = 'none';
             resultBox.style.display = 'none';
-            copyBtn.style.display = 'none';
+            actionsBlock.style.display = 'none';
 
             const tiersCount = parseInt(document.getElementById('tiers').value);
             const baseSize = parseFloat(document.getElementById('base_size').value);
@@ -357,6 +385,7 @@
             const stepSize = parseFloat(document.getElementById('step_size').value) || 0;
             const stepHeight = parseFloat(document.getElementById('step_height').value) || 0;
             const densityKgL = parseFloat(document.getElementById('density').value);
+            const decorPercent = parseFloat(document.getElementById('decor_percent').value) || 0;
             const targetWeight = parseFloat(document.getElementById('target_weight').value);
 
             let missing = [];
@@ -373,19 +402,17 @@
 
             let tiersList = [];
             let totalHeight = 0;
-            let approxWeight = 0;
+            let pureCakeWeight = 0;
             let bottomTierSize = 0;
 
             for (let i = 1; i <= tiersCount; i++) {
                 let tierSize = 0;
                 let tierH = 0;
 
-                // Если таблица открыта вручную, берём числа из неё
                 if (isCustomTableOpen && document.getElementById(`tier_size_${i}`) && document.getElementById(`tier_h_${i}`)) {
                     tierSize = parseFloat(document.getElementById(`tier_size_${i}`).value);
                     tierH = parseFloat(document.getElementById(`tier_h_${i}`).value);
                 } else {
-                    // Строго уменьшаем снизу вверх:
                     tierSize = Math.max(5, baseSize - (i - 1) * stepSize);
                     tierH = Math.max(4, baseHeight - (i - 1) * stepHeight);
                 }
@@ -407,19 +434,22 @@
                 if (currentShape === 'round') {
                     volumeCm3 = Math.PI * Math.pow(tierSize / 2, 2) * tierH;
                     const tierWeight = (volumeCm3 / 1000) * densityKgL;
-                    approxWeight += tierWeight;
+                    pureCakeWeight += tierWeight;
                     tiersList.push(`• <b>${tierTag}:</b> Ø ${tierSize} см × ${tierH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
                 } else {
                     volumeCm3 = Math.pow(tierSize, 2) * tierH;
                     const tierWeight = (volumeCm3 / 1000) * densityKgL;
-                    approxWeight += tierWeight;
+                    pureCakeWeight += tierWeight;
                     tiersList.push(`• <b>${tierTag}:</b> ◽ ${tierSize}×${tierSize} см, h=${tierH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
                 }
             }
 
             const substrateSize = bottomTierSize + 6;
             const axisH = totalHeight + 8;
-            const finalWeightStr = approxWeight.toFixed(1);
+            
+            const decorWeight = pureCakeWeight * (decorPercent / 100);
+            const totalFinalWeight = pureCakeWeight + decorWeight;
+
             const shapeTitle = currentShape === 'round' ? 'Круглый (цилиндрический)' : 'Квадратный';
 
             let specHtml = `<b>📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b><br>`;
@@ -440,16 +470,20 @@
             }
 
             specHtml += `• Общая высота конструкции: <b>${totalHeight} см</b><br>`;
-            specHtml += `• Центральная ось (длина): <b>${axisH} см</b><br>`;
-            specHtml += `• <b>Итоговый расчетный вес: ~${finalWeightStr} кг</b><br>`;
+            specHtml += `• Центральная ось (длина): <b>${axisH} см</b><br><br>`;
+            
+            specHtml += `⚖️ <b>РАСЧЕТ ВЕСА:</b><br>`;
+            specHtml += `• Чистый вес торта: <b>~${pureCakeWeight.toFixed(2)} кг</b><br>`;
+            specHtml += `• Декор и оформление (+${decorPercent}%): <b>~${decorWeight.toFixed(2)} кг</b><br>`;
+            specHtml += `• <b>ИТОГОВЫЙ ВЕС С ДЕКОРОМ: ~${totalFinalWeight.toFixed(1)} кг</b><br>`;
 
             if (!isNaN(targetWeight) && targetWeight > 0) {
-                const diff = Math.abs(approxWeight - targetWeight).toFixed(1);
+                const diff = Math.abs(totalFinalWeight - targetWeight).toFixed(1);
                 specHtml += `<br>🎯 <b>Заявленный вес клиентом:</b> ${targetWeight} кг<br>`;
-                if (Math.abs(approxWeight - targetWeight) > 0.8) {
-                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг!</i><br>`;
+                if (Math.abs(totalFinalWeight - targetWeight) > 0.8) {
+                    specHtml += `⚠️ <i>Внимание: расхождение с полным весом ~${diff} кг! Скорректируйте размеры ярусов.</i><br>`;
                 } else {
-                    specHtml += `✅ <i>Размеры идеально соответствуют заявленному весу.</i><br>`;
+                    specHtml += `✅ <i>Итоговый вес с декором отлично попадает в заявку клиента.</i><br>`;
                 }
             }
 
@@ -458,7 +492,7 @@
 
             resultBox.innerHTML = specHtml;
             resultBox.style.display = 'block';
-            copyBtn.style.display = 'block';
+            actionsBlock.style.display = 'flex';
         }
 
         function copyResult() {
@@ -467,6 +501,19 @@
             navigator.clipboard.writeText(textToCopy).then(() => {
                 alert('Спецификация скопирована в буфер обмена!');
             });
+        }
+
+        function sendToTelegram() {
+            const container = document.getElementById('result');
+            const textToCopy = container.innerText;
+            const encodedText = encodeURIComponent(textToCopy);
+            const tgUrl = `[suspicious link removed]{CONFECTIONER_USERNAME}?text=${encodedText}`;
+            
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink(tgUrl);
+            } else {
+                window.open(tgUrl, '_blank');
+            }
         }
     </script>
 </body>
