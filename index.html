@@ -201,7 +201,6 @@
             font-weight: 600;
             cursor: pointer;
             text-align: center;
-            text-decoration: none;
             box-sizing: border-box;
             display: block;
         }
@@ -290,15 +289,12 @@
         <div id="result" class="result-card"></div>
         
         <div id="actions-block" class="actions-block">
-            <button class="btn-action btn-copy" onclick="copyResult()">📋 Скопировать спецификацию</button>
-            <button class="btn-action btn-send" onclick="sendToTelegram()">📲 Отправить заказ кондитеру</button>
+            <button class="btn-action btn-copy" onclick="copyResult()">📋 Скопировать расчёт</button>
+            <button class="btn-action btn-send" onclick="shareToTelegram()">✈️ Поделиться расчётом в Telegram</button>
         </div>
     </div>
 
     <script>
-        // Имя пользователя кондитера или бота в Telegram (без @)
-        const CONFECTIONER_USERNAME = 'Galina_Malina_Cakebot';
-
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.ready();
             window.Telegram.WebApp.expand();
@@ -488,7 +484,7 @@
             }
 
             specHtml += `───────────────────────────<br>`;
-            specHtml += `<i>Сформировано автоматически</i>`;
+            specHtml += `<i>Сформировано в калькуляторе @Galina_Malina_Cakebot</i>`;
 
             resultBox.innerHTML = specHtml;
             resultBox.style.display = 'block';
@@ -499,20 +495,19 @@
             const container = document.getElementById('result');
             const textToCopy = container.innerText;
             navigator.clipboard.writeText(textToCopy).then(() => {
-                alert('Спецификация скопирована в буфер обмена!');
+                alert('Расчёт успешно скопирован в буфер обмена!');
             });
         }
 
-        function sendToTelegram() {
+        function shareToTelegram() {
             const container = document.getElementById('result');
-            const textToCopy = container.innerText;
-            const encodedText = encodeURIComponent(textToCopy);
-            const tgUrl = `[suspicious link removed]{CONFECTIONER_USERNAME}?text=${encodedText}`;
+            const textToShare = container.innerText;
+            const shareUrl = `[suspicious link removed]{encodeURIComponent(textToShare)}`;
             
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-                window.Telegram.WebApp.openTelegramLink(tgUrl);
+                window.Telegram.WebApp.openTelegramLink(shareUrl);
             } else {
-                window.open(tgUrl, '_blank');
+                window.open(shareUrl, '_blank');
             }
         }
     </script>
