@@ -224,7 +224,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label>Шаг ширины к верху (см):</label>
-                <input type="number" id="step_size" value="4" min="0" max="30">
+                <input type="number" id="step_size" value="4" min="0" max="30" title="На сколько см каждый следующий ярус уже">
             </div>
             <div class="form-group">
                 <label>Высота 1-го яруса (см): *</label>
@@ -233,8 +233,8 @@
         </div>
 
         <div class="form-group">
-            <label>Шаг высоты к верху (см, 0 = одинаковая):</label>
-            <input type="number" id="step_height" value="3" min="-15" max="15" placeholder="0">
+            <label>Уменьшение высоты к верху (см, 0 = одинаковая):</label>
+            <input type="number" id="step_height" value="3" min="0" max="15" placeholder="0 = все ярусы одной высоты">
         </div>
 
         <button type="button" class="btn-toggle-tiers" onclick="toggleTiersTable()">⚙️ Настроить параметры каждого яруса вручную</button>
@@ -314,7 +314,7 @@
             const tiersCount = parseInt(document.getElementById('tiers').value) || 3;
             const baseSize = parseFloat(document.getElementById('base_size').value) || 20;
             const stepSize = parseFloat(document.getElementById('step_size').value) || 0;
-            const baseHeight = parseFloat(document.getElementById('base_height').value) || 12;
+            const baseHeight = parseFloat(document.getElementById('base_height').value) || 19;
             const stepHeight = parseFloat(document.getElementById('step_height').value) || 0;
             const listDiv = document.getElementById('tiers-inputs-list');
 
@@ -322,8 +322,9 @@
 
             let html = '';
             for (let i = 1; i <= tiersCount; i++) {
+                // И диаметр, и высота уменьшаются снизу вверх
                 const autoSize = Math.max(5, baseSize - (i - 1) * stepSize);
-                const autoH = Math.max(5, baseHeight + (i - 1) * stepHeight);
+                const autoH = Math.max(4, baseHeight - (i - 1) * stepHeight);
 
                 let tierLabel = `${i}-й ярус`;
                 if (i === 1) tierLabel += ' (низ):';
@@ -350,7 +351,6 @@
             resultBox.style.display = 'none';
             copyBtn.style.display = 'none';
 
-            // Считываем значения напрямую из полей формы
             const tiersCount = parseInt(document.getElementById('tiers').value);
             const baseSize = parseFloat(document.getElementById('base_size').value);
             const baseHeight = parseFloat(document.getElementById('base_height').value);
@@ -380,14 +380,14 @@
                 let tierSize = 0;
                 let tierH = 0;
 
-                // Если ручная таблица открыта пользователем, считываем ее инпуты
+                // Если таблица открыта вручную, берём числа из неё
                 if (isCustomTableOpen && document.getElementById(`tier_size_${i}`) && document.getElementById(`tier_h_${i}`)) {
                     tierSize = parseFloat(document.getElementById(`tier_size_${i}`).value);
                     tierH = parseFloat(document.getElementById(`tier_h_${i}`).value);
                 } else {
-                    // Иначе СТРОГО по формуле введенных шагов
+                    // Строго уменьшаем снизу вверх:
                     tierSize = Math.max(5, baseSize - (i - 1) * stepSize);
-                    tierH = Math.max(5, baseHeight + (i - 1) * stepHeight);
+                    tierH = Math.max(4, baseHeight - (i - 1) * stepHeight);
                 }
 
                 if (!tierSize || !tierH || tierSize <= 0 || tierH <= 0) {
@@ -405,13 +405,11 @@
                 else if (i === tiersCount) tierTag += ' (верх)';
 
                 if (currentShape === 'round') {
-                    // π * r² * h
                     volumeCm3 = Math.PI * Math.pow(tierSize / 2, 2) * tierH;
                     const tierWeight = (volumeCm3 / 1000) * densityKgL;
                     approxWeight += tierWeight;
                     tiersList.push(`• <b>${tierTag}:</b> Ø ${tierSize} см × ${tierH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
                 } else {
-                    // a² * h
                     volumeCm3 = Math.pow(tierSize, 2) * tierH;
                     const tierWeight = (volumeCm3 / 1000) * densityKgL;
                     approxWeight += tierWeight;
