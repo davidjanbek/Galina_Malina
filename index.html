@@ -496,18 +496,38 @@
             const textToCopy = container.innerText;
             navigator.clipboard.writeText(textToCopy).then(() => {
                 alert('Расчёт успешно скопирован в буфер обмена!');
+            }).catch(() => {
+                fallbackCopyText(textToCopy);
             });
+        }
+
+        function fallbackCopyText(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            alert('Расчёт успешно скопирован в буфер обмена!');
         }
 
         function shareToTelegram() {
             const container = document.getElementById('result');
             const textToShare = container.innerText;
-            const shareUrl = `[suspicious link removed]{encodeURIComponent(textToShare)}`;
             
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+            // 1. Сначала гарантированно копируем текст в буфер
+            navigator.clipboard.writeText(textToShare).catch(() => {
+                fallbackCopyText(textToShare);
+            });
+
+            // 2. Формируем универсальную ссылку для Telegram Share
+            const shareUrl = "[suspicious link removed]" + encodeURIComponent("[suspicious link removed]") + "&text=" + encodeURIComponent(textToShare);
+            
+            // 3. Вызываем через нативный WebApp API Telegram
+            if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
                 window.Telegram.WebApp.openTelegramLink(shareUrl);
             } else {
-                window.open(shareUrl, '_blank');
+                window.location.href = shareUrl;
             }
         }
     </script>
