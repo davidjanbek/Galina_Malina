@@ -28,7 +28,7 @@
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            max-width: 420px;
+            max-width: 440px;
             margin: 0 auto;
         }
         h2 { margin-top: 0; font-size: 20px; text-align: center; color: #2d3436; }
@@ -51,6 +51,51 @@
             box-sizing: border-box;
             background: #fff;
         }
+
+        .btn-toggle-tiers {
+            background: #f1f2f6;
+            border: 1px solid #ced6e0;
+            color: #2f3542;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 6px 0 14px 0;
+            text-align: center;
+        }
+
+        .tiers-table-container {
+            display: none;
+            background: #fafafa;
+            border: 1px solid #e4e7eb;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+        .tiers-table-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #2f3542;
+        }
+        .tier-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .tier-row span {
+            font-size: 12px;
+            font-weight: 600;
+            width: 75px;
+            color: #57606f;
+        }
+        .tier-row input {
+            padding: 6px 8px;
+            font-size: 13px;
+        }
         
         .btn-calc {
             width: 100%;
@@ -62,7 +107,7 @@
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
-            margin-top: 8px;
+            margin-top: 6px;
         }
 
         .error-card {
@@ -110,24 +155,31 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label>Верхний ярус (Ø см): *</label>
-                <input type="number" id="top_d" placeholder="например 15" min="5" max="100">
+                <label>Ярусов (шт): *</label>
+                <input type="number" id="tiers" placeholder="например 3" value="3" min="1" max="15" onchange="generateTierRows()">
             </div>
             <div class="form-group">
-                <label>Ярусов (шт): *</label>
-                <input type="number" id="tiers" placeholder="например 3" min="1" max="20">
+                <label>Верхний ярус (Ø см): *</label>
+                <input type="number" id="top_d" placeholder="например 15" value="15" min="5" max="100" onchange="generateTierRows()">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Шаг ярусов (см):</label>
-                <input type="number" id="step" value="5" min="1" max="15">
+                <label>Базовый шаг (см):</label>
+                <input type="number" id="step" value="5" min="1" max="20" onchange="generateTierRows()">
             </div>
             <div class="form-group">
-                <label>Высота яруса (см):</label>
-                <input type="number" id="height" value="12" min="5" max="25">
+                <label>Базовая высота (см):</label>
+                <input type="number" id="height" value="12" min="5" max="35" onchange="generateTierRows()">
             </div>
+        </div>
+
+        <button type="button" class="btn-toggle-tiers" onclick="toggleTiersTable()">⚙️ Настроить высоту/диаметр каждого яруса</button>
+
+        <div id="tiers-table-container" class="tiers-table-container">
+            <div class="tiers-table-title">Индивидуальные параметры ярусов:</div>
+            <div id="tiers-inputs-list"></div>
         </div>
 
         <div class="form-group">
@@ -153,6 +205,45 @@
             window.Telegram.WebApp.expand();
         }
 
+        let isCustomTableOpen = false;
+
+        function toggleTiersTable() {
+            const container = document.getElementById('tiers-table-container');
+            isCustomTableOpen = !isCustomTableOpen;
+            container.style.display = isCustomTableOpen ? 'block' : 'none';
+            if (isCustomTableOpen) {
+                generateTierRows();
+            }
+        }
+
+        function generateTierRows() {
+            const tiersCount = parseInt(document.getElementById('tiers').value) || 0;
+            const topD = parseFloat(document.getElementById('top_d').value) || 15;
+            const stepD = parseFloat(document.getElementById('step').value) || 5;
+            const baseH = parseFloat(document.getElementById('height').value) || 12;
+            const listDiv = document.getElementById('tiers-inputs-list');
+
+            let html = '';
+            for (let i = 1; i <= tiersCount; i++) {
+                const autoD = topD + (i - 1) * stepD;
+                // Сохраняем ранее введенные кастомные значения, если они были
+                const existingD = document.getElementById(`tier_d_${i}`) ? document.getElementById(`tier_d_${i}`).value : autoD;
+                const existingH = document.getElementById(`tier_h_${i}`) ? document.getElementById(`tier_h_${i}`).value : baseH;
+
+                html += `
+                <div class="tier-row">
+                    <span>${i}-й ярус:</span>
+                    <input type="number" id="tier_d_${i}" value="${existingD}" placeholder="Ø см" title="Диаметр ${i}-го яруса (см)">
+                    <span style="width:20px; text-align:center;">×</span>
+                    <input type="number" id="tier_h_${i}" value="${existingH}" placeholder="Высота см" title="Высота ${i}-го яруса (см)">
+                </div>`;
+            }
+            listDiv.innerHTML = html;
+        }
+
+        // Инициализация при старте
+        generateTierRows();
+
         function calculateCake() {
             const errorBox = document.getElementById('error-box');
             const resultBox = document.getElementById('result');
@@ -162,73 +253,78 @@
             resultBox.style.display = 'none';
             copyBtn.style.display = 'none';
 
-            // Считывание значений
+            const tiersCount = parseInt(document.getElementById('tiers').value);
             const topDInput = document.getElementById('top_d').value;
-            const tiersInput = document.getElementById('tiers').value;
             const densityInput = document.getElementById('density').value;
 
-            // Валидация обязательных данных
+            // Валидация
             let missingFields = [];
+            if (!tiersCount || tiersCount <= 0) missingFields.push('Количество ярусов');
             if (!topDInput || parseFloat(topDInput) <= 0) missingFields.push('Диаметр верхнего яруса');
-            if (!tiersInput || parseInt(tiersInput) <= 0) missingFields.push('Количество ярусов');
             if (!densityInput || parseFloat(densityInput) <= 0) missingFields.push('Плотность начинки (кг/л)');
 
             if (missingFields.length > 0) {
-                errorBox.innerHTML = '⚠️ <b>Недостаточно данных для расчета!</b><br>Заполните обязательные поля: ' + missingFields.join(', ') + '.';
+                errorBox.innerHTML = '⚠️ <b>Недостаточно данных для расчета!</b><br>Заполните: ' + missingFields.join(', ') + '.';
                 errorBox.style.display = 'block';
                 return;
             }
 
-            const topD = parseFloat(topDInput);
-            const tiersCount = parseInt(tiersInput);
-            const stepD = parseFloat(document.getElementById('step').value) || 5;
-            const tierH = parseFloat(document.getElementById('height').value) || 12;
             const densityKgL = parseFloat(densityInput);
             const targetWeight = parseFloat(document.getElementById('target_weight').value);
 
             let tiersList = [];
             let totalHeight = 0;
             let approxWeight = 0;
-            let lastD = topD;
+            let maxD = 0;
 
             for (let i = 1; i <= tiersCount; i++) {
-                let currentD = topD + (i - 1) * stepD;
-                tiersList.push(`• ${i}-й ярус: <b>Ø ${currentD} см</b> × ${tierH} см`);
-                totalHeight += tierH;
-                
+                const dElem = document.getElementById(`tier_d_${i}`);
+                const hElem = document.getElementById(`tier_h_${i}`);
+
+                const currentD = dElem ? parseFloat(dElem.value) : (parseFloat(topDInput) + (i - 1) * 5);
+                const currentH = hElem ? parseFloat(hElem.value) : 12;
+
+                if (!currentD || !currentH || currentD <= 0 || currentH <= 0) {
+                    errorBox.innerHTML = `⚠️ <b>Ошибка в параметрах ${i}-го яруса!</b><br>Укажите корректный диаметр и высоту.`;
+                    errorBox.style.display = 'block';
+                    return;
+                }
+
+                totalHeight += currentH;
+                if (currentD > maxD) maxD = currentD;
+
                 // Объём цилиндра в см³ = π * r² * h
-                let volumeCm3 = Math.PI * Math.pow(currentD / 2, 2) * tierH;
-                // Объём в литрах = volumeCm3 / 1000
-                // Вес (кг) = Объём (л) * Плотность (кг/л)
-                approxWeight += (volumeCm3 / 1000) * densityKgL;
-                lastD = currentD;
+                const volumeCm3 = Math.PI * Math.pow(currentD / 2, 2) * currentH;
+                // Вес яруса (кг) = (Объём / 1000) * плотность (кг/л)
+                const tierWeight = (volumeCm3 / 1000) * densityKgL;
+                approxWeight += tierWeight;
+
+                tiersList.push(`• <b>${i}-й ярус:</b> Ø ${currentD} см × ${currentH} см <i>(~${tierWeight.toFixed(2)} кг)</i>`);
             }
 
-            const substrateD = lastD + 6;
+            const substrateD = maxD + 6;
             const axisH = totalHeight + 8;
             const finalWeightStr = approxWeight.toFixed(1);
 
             let specHtml = `<b>📋 СПЕЦИФИКАЦИЯ РАСЧЕТА ТОРТА</b><br>`;
             specHtml += `───────────────────────────<br>`;
-            specHtml += `🎂 <b>Ярусов:</b> ${tiersCount}<br>`;
-            specHtml += `⚖️ <b>Плотность начинки:</b> ${densityKgL} кг/л<br>`;
-            specHtml += `📏 <b>Верхний диаметр:</b> Ø ${topD} см<br><br>`;
-            specHtml += `📐 <b>РАСЧЕТ ЯРУСОВ (Диаметр × Высота):</b><br>`;
+            specHtml += `🎂 <b>Количество ярусов:</b> ${tiersCount}<br>`;
+            specHtml += `⚖️ <b>Плотность начинки:</b> ${densityKgL} кг/л<br><br>`;
+            specHtml += `📐 <b>ПАРАМЕТРЫ ЯРУСОВ (Ø × Высота | Вес):</b><br>`;
             specHtml += tiersList.join('<br>') + `<br><br>`;
             specHtml += `🛠 <b>КОНСТРУКТИВ И СБОРКА:</b><br>`;
-            specHtml += `• Подложка: <b>Ø ${substrateD} см</b><br>`;
-            specHtml += `• Высота конструкции: <b>${totalHeight} см</b><br>`;
-            specHtml += `• Центральная ось: <b>${axisH} см</b><br>`;
-            specHtml += `• Ориентировочный вес: <b>~${finalWeightStr} кг</b><br>`;
+            specHtml += `• Рекомендуемая подложка: <b>Ø ${substrateD} см</b><br>`;
+            specHtml += `• Общая высота конструкции: <b>${totalHeight} см</b><br>`;
+            specHtml += `• Центральная ось (длина): <b>${axisH} см</b><br>`;
+            specHtml += `• <b>Итоговый расчетный вес: ~${finalWeightStr} кг</b><br>`;
 
-            // Сравнение с желаемым весом от клиента
             if (!isNaN(targetWeight) && targetWeight > 0) {
                 const diff = Math.abs(approxWeight - targetWeight).toFixed(1);
                 specHtml += `<br>🎯 <b>Заявленный вес клиентом:</b> ${targetWeight} кг<br>`;
                 if (Math.abs(approxWeight - targetWeight) > 0.8) {
-                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скорректируйте диаметры или высоту.</i><br>`;
+                    specHtml += `⚠️ <i>Внимание: расхождение с конструктивным весом ~${diff} кг! Скорректируйте диаметры или высоту ярусов.</i><br>`;
                 } else {
-                    specHtml += `✅ <i>Размеры полностью соответствуют заявленному весу.</i><br>`;
+                    specHtml += `✅ <i>Размеры идеально соответствуют заявленному весу.</i><br>`;
                 }
             }
 
