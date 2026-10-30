@@ -75,26 +75,52 @@
             margin-bottom: 14px;
         }
         .tiers-table-title {
-            font-size: 12.5px;
+            font-size: 13px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             color: #2f3542;
         }
+
+        /* Шапка столбцов над ярусами */
+        .tier-header-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #636e72;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .th-label { width: 68px; }
+        .th-col { flex: 1; text-align: center; }
+        .th-spacer { width: 14px; }
+
         .tier-row {
             display: flex;
             align-items: center;
             gap: 8px;
             margin-bottom: 8px;
         }
-        .tier-row span {
-            font-size: 12px;
+        .tier-row span.tier-num {
+            font-size: 12.5px;
             font-weight: 600;
-            width: 75px;
+            width: 68px;
             color: #57606f;
         }
         .tier-row input {
-            padding: 6px 8px;
+            flex: 1;
+            padding: 8px;
             font-size: 13px;
+            text-align: center;
+        }
+        .tier-row span.tier-sep {
+            width: 14px;
+            text-align: center;
+            font-size: 13px;
+            color: #a4b0be;
+            font-weight: bold;
         }
         
         .btn-calc {
@@ -178,7 +204,15 @@
         <button type="button" class="btn-toggle-tiers" onclick="toggleTiersTable()">⚙️ Настроить высоту/диаметр каждого яруса</button>
 
         <div id="tiers-table-container" class="tiers-table-container">
-            <div class="tiers-table-title">Индивидуальные параметры ярусов:</div>
+            <div class="tiers-table-title">Параметры каждого яруса:</div>
+            
+            <div class="tier-header-row">
+                <span class="th-label">Ярус</span>
+                <span class="th-col">Диаметр (см)</span>
+                <span class="th-spacer"></span>
+                <span class="th-col">Высота (см)</span>
+            </div>
+
             <div id="tiers-inputs-list"></div>
         </div>
 
@@ -226,22 +260,20 @@
             let html = '';
             for (let i = 1; i <= tiersCount; i++) {
                 const autoD = topD + (i - 1) * stepD;
-                // Сохраняем ранее введенные кастомные значения, если они были
                 const existingD = document.getElementById(`tier_d_${i}`) ? document.getElementById(`tier_d_${i}`).value : autoD;
                 const existingH = document.getElementById(`tier_h_${i}`) ? document.getElementById(`tier_h_${i}`).value : baseH;
 
                 html += `
                 <div class="tier-row">
-                    <span>${i}-й ярус:</span>
-                    <input type="number" id="tier_d_${i}" value="${existingD}" placeholder="Ø см" title="Диаметр ${i}-го яруса (см)">
-                    <span style="width:20px; text-align:center;">×</span>
-                    <input type="number" id="tier_h_${i}" value="${existingH}" placeholder="Высота см" title="Высота ${i}-го яруса (см)">
+                    <span class="tier-num">${i}-й ярус:</span>
+                    <input type="number" id="tier_d_${i}" value="${existingD}" placeholder="Ø см">
+                    <span class="tier-sep">×</span>
+                    <input type="number" id="tier_h_${i}" value="${existingH}" placeholder="h см">
                 </div>`;
             }
             listDiv.innerHTML = html;
         }
 
-        // Инициализация при старте
         generateTierRows();
 
         function calculateCake() {
@@ -257,7 +289,6 @@
             const topDInput = document.getElementById('top_d').value;
             const densityInput = document.getElementById('density').value;
 
-            // Валидация
             let missingFields = [];
             if (!tiersCount || tiersCount <= 0) missingFields.push('Количество ярусов');
             if (!topDInput || parseFloat(topDInput) <= 0) missingFields.push('Диаметр верхнего яруса');
@@ -293,9 +324,7 @@
                 totalHeight += currentH;
                 if (currentD > maxD) maxD = currentD;
 
-                // Объём цилиндра в см³ = π * r² * h
                 const volumeCm3 = Math.PI * Math.pow(currentD / 2, 2) * currentH;
-                // Вес яруса (кг) = (Объём / 1000) * плотность (кг/л)
                 const tierWeight = (volumeCm3 / 1000) * densityKgL;
                 approxWeight += tierWeight;
 
